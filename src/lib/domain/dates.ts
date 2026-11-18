@@ -30,3 +30,8 @@ export function currentMonth(now: Date = new Date()): string {
 export function monthRange(month: string): { start: string; end: string } {
   return { start: `${month}-01`, end: `${month}-31` };
 }
+
+/** Reads a ?month= URL param: a valid YYYY-MM is used as-is, anything else falls back. */
+export function monthFromParam(raw: string | undefined, fallback: string): string {
+  return raw !== undefined && isValidMonth(raw) ? raw : fallback;
+}

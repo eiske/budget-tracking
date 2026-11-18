@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentMonth, isValidDate, isValidMonth, todayString } from "./dates";
+import { currentMonth, isValidDate, isValidMonth, monthFromParam, todayString } from "./dates";
 import { centsToInputValue, formatCents, parseAmountToCents } from "./money";
 import { parseTransactionForm } from "./transaction-input";
 
@@ -84,5 +84,14 @@ describe("parseTransactionForm", () => {
 
   it("handles missing fields without throwing", () => {
     expect(parseTransactionForm({}).ok).toBe(false);
+  });
+});
+
+describe("monthFromParam", () => {
+  it("accepts a valid month and falls back otherwise", () => {
+    expect(monthFromParam("2026-03", "2026-11")).toBe("2026-03");
+    for (const bad of [undefined, "", "2026-13", "garbage", "2026-3", "2026-03-01"]) {
+      expect(monthFromParam(bad, "2026-11")).toBe("2026-11");
+    }
   });
 });

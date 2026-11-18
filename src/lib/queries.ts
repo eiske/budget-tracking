@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
-import { categories, transactions } from "@/db/schema";
+import { budgets, categories, transactions } from "@/db/schema";
+import { budgetStatus, type BudgetLine } from "./domain/budget";
 import type { BreakdownRow } from "./domain/dashboard";
 import { monthRange } from "./domain/dates";
 
@@ -104,4 +105,32 @@ export function totalsFor(f: TransactionFilters) {
     .all();
   const get = (k: "income" | "expense") => rows.find((r) => r.kind === k)?.total ?? 0;
   return { incomeCents: get("income"), expenseCents: get("expense") };
+}
+
+export function listExpenseCategories() {
+  return db.select().from(categories).where(eq(categories.kind, "expense")).orderBy(categories.name).all();
+}
+
+/** Budgets for a month with what was spent in each category that month (unsorted). */
+export function budgetLines(month: string): BudgetLine[] {
+  const spentByCategory = new Map(categoryBreakdown(month).map((r) => [r.id, r.totalCents]));
+  return db
+    .select({
+      id: budgets.id,
+      categoryId: budgets.categoryId,
+      name: categories.name,
+      limitCents: budgets.limitCents,
+    })
+    .from(budgets)
+    .innerJoin(categories, eq(budgets.categoryId, categories.id))
+    .where(eq(budgets.month, month))
+    .all()
+    .map((b) => {
+      const spentCents = spentByCategory.get(b.categoryId) ?? 0;
+      return { ...b, spentCents, status: budgetStatus(spentCents, b.limitCents) };
+    });
+}
+
+export function budgetCount(month: string): number {
+  return db.select({ n: sql<number>`count(*)` }).from(budgets).where(eq(budgets.month, month)).get()?.n ?? 0;
 }
