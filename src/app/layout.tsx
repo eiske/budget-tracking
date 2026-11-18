@@ -26,10 +26,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <header className="border-b border-neutral-200 dark:border-neutral-800">
-          <nav className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 text-sm">
+          <nav className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-1 px-4 py-3 text-sm">
             <Link href="/" className="font-semibold">Budget tracking</Link>
             <Link href="/" className="hover:underline">Dashboard</Link>
             <Link href="/transactions" className="hover:underline">Transactions</Link>
+            <Link href="/budgets" className="hover:underline">Budgets</Link>
           </nav>
         </header>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>

@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { BudgetMeter } from "@/components/budget-meter";
 import { CategoryBars } from "@/components/category-bars";
 import { DeltaBadge } from "@/components/delta-badge";
 import { FitText } from "@/components/fit-text";
+import { MonthNav } from "@/components/month-nav";
 import { MonthlyChart, type MonthPoint } from "@/components/monthly-chart";
 import { StatTile } from "@/components/stat-tile";
 import { CURRENCY, LOCALE } from "@/lib/config";
+import { sortByUsage } from "@/lib/domain/budget";
 import { describeDelta, foldTail } from "@/lib/domain/dashboard";
-import { currentMonth, isValidMonth } from "@/lib/domain/dates";
+import { currentMonth, monthFromParam } from "@/lib/domain/dates";
 import { formatCents } from "@/lib/domain/money";
 import { addMonths, lastMonths, monthLabel } from "@/lib/domain/months";
-import { categoryBreakdown, monthlyTotals } from "@/lib/queries";
+import { budgetLines, categoryBreakdown, monthlyTotals } from "@/lib/queries";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -20,6 +23,7 @@ const fmt = (cents: number) => formatCents(cents, CURRENCY, LOCALE);
 
 const TREND_MONTHS = 6;
 const MAX_CATEGORY_ROWS = 8;
+const MAX_BUDGET_ROWS = 5;
 
 export default function DashboardPage({ searchParams }: { searchParams: SearchParams }) {
   // Request-time data (SQLite) must sit under Suspense with Cache Components.
@@ -35,10 +39,8 @@ async function Dashboard({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
 
   const nowMonth = currentMonth();
-  const rawMonth = first(sp.month);
-  const month = rawMonth && isValidMonth(rawMonth) ? rawMonth : nowMonth;
+  const month = monthFromParam(first(sp.month), nowMonth);
   const prevMonth = addMonths(month, -1);
-  const nextMonth = addMonths(month, 1);
 
   const months = lastMonths(month, TREND_MONTHS);
   const totals = monthlyTotals(months);
@@ -48,6 +50,9 @@ async function Dashboard({ searchParams }: { searchParams: SearchParams }) {
   const prevNetCents = previous.incomeCents - previous.expenseCents;
 
   const breakdown = foldTail(categoryBreakdown(month), MAX_CATEGORY_ROWS);
+  const budgets = sortByUsage(budgetLines(month));
+  const shownBudgets = budgets.slice(0, MAX_BUDGET_ROWS);
+  const needAttention = budgets.filter((b) => b.status.state !== "ok").length;
   const prevShort = monthLabel(prevMonth, LOCALE, "short");
   const heroText = fmt(current.expenseCents);
 
@@ -64,24 +69,7 @@ async function Dashboard({ searchParams }: { searchParams: SearchParams }) {
       {/* Filters: one row above the content they scope. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Dashboard</h1>
-        <nav aria-label="Month" className="flex items-center gap-3 text-sm">
-          <Link href={`/?month=${prevMonth}`} className="rounded-md border border-hairline px-3 py-1.5 hover:bg-ghost">
-            ← {monthLabel(prevMonth, LOCALE, "short")}
-          </Link>
-          <span className="min-w-32 text-center font-medium">{monthLabel(month, LOCALE)}</span>
-          {month < nowMonth ? (
-            <Link
-              href={nextMonth === nowMonth ? "/" : `/?month=${nextMonth}`}
-              className="rounded-md border border-hairline px-3 py-1.5 hover:bg-ghost"
-            >
-              {monthLabel(nextMonth, LOCALE, "short")} →
-            </Link>
-          ) : (
-            <span aria-disabled className="rounded-md border border-hairline px-3 py-1.5 text-muted opacity-50">
-              {monthLabel(nextMonth, LOCALE, "short")} →
-            </span>
-          )}
-        </nav>
+        <MonthNav basePath="/" month={month} nowMonth={nowMonth} />
       </div>
 
       {/* Hero figure: exactly one per view. */}
@@ -100,6 +88,41 @@ async function Dashboard({ searchParams }: { searchParams: SearchParams }) {
           <DeltaBadge delta={describeDelta(netCents, prevNetCents, true)} vs={prevShort} />
         </StatTile>
       </div>
+
+      <section className="flex min-w-0 flex-col gap-4 rounded-xl border border-hairline bg-surface p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">
+            Budgets
+            {needAttention > 0 && (
+              <span className="ml-2 text-sm font-normal text-ink-2">
+                · {needAttention} {needAttention === 1 ? "needs" : "need"} attention
+              </span>
+            )}
+          </h2>
+          <Link href={month === nowMonth ? "/budgets" : `/budgets?month=${month}`} className="text-sm underline">
+            Manage budgets
+          </Link>
+        </div>
+        {shownBudgets.length === 0 ? (
+          <p className="text-sm text-muted">
+            No budgets set for {monthLabel(month, LOCALE)}.{" "}
+            <Link href={month === nowMonth ? "/budgets" : `/budgets?month=${month}`} className="underline">
+              Set a budget
+            </Link>
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-5">
+            {shownBudgets.map((line) => (
+              <BudgetMeter key={line.id} line={line} />
+            ))}
+          </ul>
+        )}
+        {budgets.length > shownBudgets.length && (
+          <p className="text-sm text-muted">
+            Showing the {shownBudgets.length} most used of {budgets.length} budgets.
+          </p>
+        )}
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="flex min-w-0 flex-col gap-4 rounded-xl border border-hairline bg-surface p-5">

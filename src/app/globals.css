@@ -16,6 +16,9 @@
   --ghost: rgba(11, 11, 11, 0.05);
   --good-text: #006300;
   --bad-text: #d03b3b;
+  /* Status palette: fixed, never themed. Always paired with an icon + label. */
+  --status-warning: #fab219;
+  --status-critical: #d03b3b;
 }
 
 @theme inline {
