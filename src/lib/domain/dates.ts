@@ -35,3 +35,8 @@ export function monthRange(month: string): { start: string; end: string } {
 export function monthFromParam(raw: string | undefined, fallback: string): string {
   return raw !== undefined && isValidMonth(raw) ? raw : fallback;
 }
+
+/** Number of days in a calendar month (month is 1-12). Handles leap years. */
+export function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}

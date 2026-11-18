@@ -72,7 +72,7 @@ describe("parseTransactionForm", () => {
   it("returns normalized data", () => {
     expect(parseTransactionForm(valid)).toEqual({
       ok: true,
-      data: { date: "2026-11-18", amountCents: 1250, description: "Coffee", categoryId: 3 },
+      data: { date: "2026-11-18", amountCents: 1250, description: "Coffee", categoryId: 3, installments: 1 },
     });
   });
 
@@ -84,6 +84,29 @@ describe("parseTransactionForm", () => {
 
   it("handles missing fields without throwing", () => {
     expect(parseTransactionForm({}).ok).toBe(false);
+  });
+
+  it("treats a blank installments field as a single payment", () => {
+    const r = parseTransactionForm({ ...valid, installments: "" });
+    expect(r.ok && r.data.installments).toBe(1);
+  });
+
+  it("accepts installments and keeps the total amount", () => {
+    const r = parseTransactionForm({ ...valid, amount: "300", installments: "3" });
+    expect(r).toMatchObject({ ok: true, data: { amountCents: 30000, installments: 3 } });
+  });
+
+  it.each(["0", "-2", "1.5", "abc", "61", "0x10", "1e1"])("rejects installments %j", (n) => {
+    const r = parseTransactionForm({ ...valid, installments: n });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(Object.keys(r.errors)).toEqual(["installments"]);
+  });
+
+  it("rejects a total too small to give every installment a cent", () => {
+    const r = parseTransactionForm({ ...valid, amount: "0.05", installments: "6" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errors.installments).toMatch(/too small/);
+    expect(parseTransactionForm({ ...valid, amount: "0.06", installments: "6" }).ok).toBe(true);
   });
 });
 

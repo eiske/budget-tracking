@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
-import { budgets, categories, transactions } from "@/db/schema";
+import { budgets, categories, recurringRules, recurringSkips, transactions } from "@/db/schema";
 import { budgetStatus, type BudgetLine } from "./domain/budget";
 import type { BreakdownRow } from "./domain/dashboard";
 import { monthRange } from "./domain/dates";
@@ -41,6 +41,10 @@ export function listTransactions(f: TransactionFilters) {
       categoryName: categories.name,
       categoryColor: categories.color,
       categoryKind: categories.kind,
+      installmentGroupId: transactions.installmentGroupId,
+      installmentNumber: transactions.installmentNumber,
+      installmentTotal: transactions.installmentTotal,
+      recurringId: transactions.recurringId,
     })
     .from(transactions)
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
@@ -133,4 +137,48 @@ export function budgetLines(month: string): BudgetLine[] {
 
 export function budgetCount(month: string): number {
   return db.select({ n: sql<number>`count(*)` }).from(budgets).where(eq(budgets.month, month)).get()?.n ?? 0;
+}
+
+export function listRecurringRules() {
+  return db
+    .select({
+      id: recurringRules.id,
+      description: recurringRules.description,
+      amountCents: recurringRules.amountCents,
+      categoryId: recurringRules.categoryId,
+      categoryName: categories.name,
+      categoryKind: categories.kind,
+      dayOfMonth: recurringRules.dayOfMonth,
+      startDate: recurringRules.startDate,
+      endDate: recurringRules.endDate,
+    })
+    .from(recurringRules)
+    .innerJoin(categories, eq(recurringRules.categoryId, categories.id))
+    .orderBy(recurringRules.description, recurringRules.id)
+    .all();
+}
+
+export function getRecurringRule(id: number) {
+  return db.select().from(recurringRules).where(eq(recurringRules.id, id)).get();
+}
+
+/** Which rules already have an entry for `month`, and which the user deliberately removed. */
+export function recurringMonthState(month: string) {
+  const generated = new Set(
+    db
+      .select({ id: transactions.recurringId })
+      .from(transactions)
+      .where(eq(transactions.recurringMonth, month))
+      .all()
+      .map((r) => r.id),
+  );
+  const skipped = new Set(
+    db
+      .select({ id: recurringSkips.recurringId })
+      .from(recurringSkips)
+      .where(eq(recurringSkips.month, month))
+      .all()
+      .map((r) => r.id),
+  );
+  return { generated, skipped };
 }
