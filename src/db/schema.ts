@@ -30,6 +30,22 @@ export const recurringRules = sqliteTable("recurring_rules", {
   endDate: text("end_date"), // YYYY-MM-DD, null = open ended
 });
 
+/**
+ * Months a user deliberately deleted a rule's generated entry for. Without this, generation would
+ * recreate the deleted transaction on the next app open.
+ */
+export const recurringSkips = sqliteTable(
+  "recurring_skips",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    recurringId: integer("recurring_id")
+      .notNull()
+      .references(() => recurringRules.id),
+    month: text("month").notNull(), // YYYY-MM
+  },
+  (t) => [uniqueIndex("recurring_skips_uq").on(t.recurringId, t.month)],
+);
+
 export const transactions = sqliteTable(
   "transactions",
   {
@@ -90,4 +106,5 @@ export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
 export type Budget = typeof budgets.$inferSelect;
 export type RecurringRule = typeof recurringRules.$inferSelect;
+export type RecurringSkip = typeof recurringSkips.$inferSelect;
 export type CategoryRule = typeof categoryRules.$inferSelect;
