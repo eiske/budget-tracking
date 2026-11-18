@@ -44,3 +44,13 @@ next-env.d.ts
 /data/
 *.db
 *.db-*
+
+# local backups and e2e artifacts (contain financial data / generated)
+/backups/
+/.next-e2e/
+/e2e/.tmp/
+/test-results/
+/playwright-report/
+
+# but keep the documented template
+!.env.example
