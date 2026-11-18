@@ -1,6 +1,6 @@
-import { and, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
-import { budgets, categories, recurringRules, recurringSkips, transactions } from "@/db/schema";
+import { budgets, categories, categoryRules, recurringRules, recurringSkips, transactions } from "@/db/schema";
 import { budgetStatus, type BudgetLine } from "./domain/budget";
 import type { BreakdownRow } from "./domain/dashboard";
 import { monthRange } from "./domain/dates";
@@ -181,4 +181,33 @@ export function recurringMonthState(month: string) {
       .map((r) => r.id),
   );
   return { generated, skipped };
+}
+
+/** Which of these import hashes already exist in the database (chunked: SQLite has a variable limit). */
+export function existingImportHashes(hashes: string[]): Set<string> {
+  const found = new Set<string>();
+  for (let i = 0; i < hashes.length; i += 500) {
+    const rows = db
+      .select({ hash: transactions.importHash })
+      .from(transactions)
+      .where(inArray(transactions.importHash, hashes.slice(i, i + 500)))
+      .all();
+    for (const r of rows) if (r.hash) found.add(r.hash);
+  }
+  return found;
+}
+
+export function listCategoryRules() {
+  return db
+    .select({
+      id: categoryRules.id,
+      pattern: categoryRules.pattern,
+      categoryId: categoryRules.categoryId,
+      categoryName: categories.name,
+      categoryKind: categories.kind,
+    })
+    .from(categoryRules)
+    .innerJoin(categories, eq(categoryRules.categoryId, categories.id))
+    .orderBy(categoryRules.id)
+    .all();
 }
