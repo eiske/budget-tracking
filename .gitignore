@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local financial data (never commit)
+/data/
+*.db
+*.db-*
