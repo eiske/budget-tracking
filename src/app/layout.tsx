@@ -28,6 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <header className="border-b border-neutral-200 dark:border-neutral-800">
           <nav className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 text-sm">
             <Link href="/" className="font-semibold">Budget tracking</Link>
+            <Link href="/" className="hover:underline">Dashboard</Link>
             <Link href="/transactions" className="hover:underline">Transactions</Link>
           </nav>
         </header>

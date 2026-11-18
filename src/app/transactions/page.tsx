@@ -66,7 +66,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
         <Link href="/transactions" className="py-1.5 text-sm underline">Reset</Link>
       </form>
 
-      <dl className="flex gap-8 text-sm">
+      <dl className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
         <div>
           <dt className="text-neutral-500">Expenses</dt>
           <dd className="text-lg font-semibold">{fmt(totals.expenseCents)}</dd>
@@ -84,7 +84,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       {rows.length === 0 ? (
         <p className="text-sm text-neutral-500">No transactions match these filters.</p>
       ) : (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-sm">
           <thead>
             <tr className="border-b border-neutral-200 text-left text-neutral-500 dark:border-neutral-800">
               <th className="py-2 font-medium">Date</th>
@@ -126,6 +127,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
             })}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
