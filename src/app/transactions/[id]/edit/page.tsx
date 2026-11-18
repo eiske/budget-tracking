@@ -27,6 +27,17 @@ async function EditTransactionForm({ params }: { params: Promise<{ id: string }>
   if (!tx) notFound();
 
   return (
+    <>
+      {tx.installmentGroupId && (
+        <p className="text-sm text-ink-2">
+          Installment {tx.installmentNumber} of {tx.installmentTotal}. Changes apply to this installment only.
+        </p>
+      )}
+      {tx.recurringId !== null && (
+        <p className="text-sm text-ink-2">
+          Created by a recurring rule. Changes apply to this entry only, not to the rule.
+        </p>
+      )}
     <TransactionForm
       action={saveTransaction.bind(null, id)}
       categories={listCategories()}
@@ -38,5 +49,6 @@ async function EditTransactionForm({ params }: { params: Promise<{ id: string }>
       }}
       submitLabel="Save changes"
     />
+    </>
   );
 }

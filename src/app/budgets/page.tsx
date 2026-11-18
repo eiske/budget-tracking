@@ -9,6 +9,7 @@ import { sortByUsage } from "@/lib/domain/budget";
 import { currentMonth, monthFromParam } from "@/lib/domain/dates";
 import { addMonths, monthLabel } from "@/lib/domain/months";
 import { budgetCount, budgetLines, listExpenseCategories } from "@/lib/queries";
+import { ensureRecurringForMonth } from "@/lib/recurring";
 import { copyBudgets, deleteBudget, saveBudget } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -29,6 +30,7 @@ async function Budgets({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
 
   const nowMonth = currentMonth();
+  ensureRecurringForMonth(nowMonth); // spending shown against budgets must include recurring entries
   const month = monthFromParam(first(sp.month), nowMonth);
   const prevMonth = addMonths(month, -1);
 

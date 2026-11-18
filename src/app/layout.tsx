@@ -31,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="hover:underline">Dashboard</Link>
             <Link href="/transactions" className="hover:underline">Transactions</Link>
             <Link href="/budgets" className="hover:underline">Budgets</Link>
+            <Link href="/recurring" className="hover:underline">Recurring</Link>
           </nav>
         </header>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>

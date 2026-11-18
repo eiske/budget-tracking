@@ -15,6 +15,7 @@ import { currentMonth, monthFromParam } from "@/lib/domain/dates";
 import { formatCents } from "@/lib/domain/money";
 import { addMonths, lastMonths, monthLabel } from "@/lib/domain/months";
 import { budgetLines, categoryBreakdown, monthlyTotals } from "@/lib/queries";
+import { ensureRecurringForMonth } from "@/lib/recurring";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -39,6 +40,7 @@ async function Dashboard({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
 
   const nowMonth = currentMonth();
+  ensureRecurringForMonth(nowMonth); // current month only, before any totals are read
   const month = monthFromParam(first(sp.month), nowMonth);
   const prevMonth = addMonths(month, -1);
 

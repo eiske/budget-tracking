@@ -23,7 +23,8 @@ async function NewTransactionForm() {
     <TransactionForm
       action={saveTransaction.bind(null, null)}
       categories={listCategories()}
-      defaults={{ date: todayString(), amount: "", description: "", categoryId: "" }}
+      defaults={{ date: todayString(), amount: "", description: "", categoryId: "", installments: "1" }}
+      showInstallments
       submitLabel="Add transaction"
     />
   );

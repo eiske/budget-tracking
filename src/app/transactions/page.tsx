@@ -5,7 +5,8 @@ import { CURRENCY, LOCALE } from "@/lib/config";
 import { currentMonth, isValidMonth } from "@/lib/domain/dates";
 import { formatCents } from "@/lib/domain/money";
 import { listCategories, listTransactions, totalsFor, type TransactionFilters } from "@/lib/queries";
-import { deleteTransaction } from "./actions";
+import { ensureRecurringForMonth } from "@/lib/recurring";
+import { deleteInstallmentGroup, deleteTransaction } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -16,6 +17,7 @@ const input =
 
 export default async function TransactionsPage({ searchParams }: { searchParams: SearchParams }) {
   await connection(); // sync SQLite driver: keep queries out of prerendering
+  ensureRecurringForMonth(currentMonth()); // before reading, so this month's entries are listed
   const sp = await searchParams;
 
   // month: absent -> current month; empty -> all time; invalid -> current month
@@ -101,7 +103,26 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
               return (
                 <tr key={t.id} className="border-b border-neutral-100 dark:border-neutral-900">
                   <td className="py-2 whitespace-nowrap">{t.date}</td>
-                  <td>{t.description}</td>
+                  <td>
+                    {t.description}
+                    {t.installmentGroupId && (
+                      <span
+                        title={`Installment ${t.installmentNumber} of ${t.installmentTotal}`}
+                        className="ml-2 whitespace-nowrap rounded border border-hairline px-1.5 py-0.5 text-xs text-ink-2"
+                      >
+                        <span className="sr-only">Installment </span>
+                        {t.installmentNumber}/{t.installmentTotal}
+                      </span>
+                    )}
+                    {t.recurringId !== null && (
+                      <span
+                        title="Created by a recurring rule"
+                        className="ml-2 whitespace-nowrap rounded border border-hairline px-1.5 py-0.5 text-xs text-ink-2"
+                      >
+                        <span aria-hidden>↻ </span>Recurring
+                      </span>
+                    )}
+                  </td>
                   <td>
                     <span className="inline-flex items-center gap-2">
                       <span
@@ -121,6 +142,16 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                   <td className="flex justify-end gap-4 py-2">
                     <Link href={`/transactions/${t.id}/edit`} className="underline">Edit</Link>
                     <DeleteButton id={t.id} action={deleteTransaction} label={t.description} />
+                    {t.installmentGroupId && (
+                      <DeleteButton
+                        id={t.installmentGroupId}
+                        name="groupId"
+                        action={deleteInstallmentGroup}
+                        label={t.description}
+                        text="Delete all"
+                        message={`Delete all ${t.installmentTotal} installments of "${t.description}"? This cannot be undone.`}
+                      />
+                    )}
                   </td>
                 </tr>
               );
