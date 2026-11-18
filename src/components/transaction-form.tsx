@@ -9,14 +9,16 @@ type Category = { id: number; name: string; kind: "expense" | "income" };
 type Props = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   categories: Category[];
-  defaults: { date: string; amount: string; description: string; categoryId: string };
+  defaults: { date: string; amount: string; description: string; categoryId: string; installments?: string };
   submitLabel: string;
+  /** Only when creating: editing changes a single row, never the whole installment plan. */
+  showInstallments?: boolean;
 };
 
 const field =
   "w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm dark:border-neutral-700";
 
-export function TransactionForm({ action, categories, defaults, submitLabel }: Props) {
+export function TransactionForm({ action, categories, defaults, submitLabel, showInstallments = false }: Props) {
   const [state, formAction, pending] = useActionState(action, null);
   const v = state?.values ?? defaults;
   const err = state?.errors ?? {};
@@ -70,6 +72,23 @@ export function TransactionForm({ action, categories, defaults, submitLabel }: P
         </select>
         {err.categoryId && <span className="text-red-600">{err.categoryId}</span>}
       </label>
+
+      {showInstallments && (
+        <label className="flex flex-col gap-1 text-sm">
+          Installments
+          <input
+            name="installments"
+            inputMode="numeric"
+            defaultValue={v.installments ?? "1"}
+            className={`${field} w-28`}
+          />
+          <span className="text-xs text-muted">
+            1 = a single payment. With 2 or more, the amount above is the total and is split evenly
+            across monthly installments, one per month starting on the date above.
+          </span>
+          {err.installments && <span className="text-red-600">{err.installments}</span>}
+        </label>
+      )}
 
       <div className="flex gap-3">
         <button
