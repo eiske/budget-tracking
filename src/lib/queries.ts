@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
 import { categories, transactions } from "@/db/schema";
+import type { BreakdownRow } from "./domain/dashboard";
 import { monthRange } from "./domain/dates";
 
 export type TransactionFilters = {
@@ -49,6 +50,44 @@ export function listTransactions(f: TransactionFilters) {
 
 export function getTransaction(id: number) {
   return db.select().from(transactions).where(eq(transactions.id, id)).get();
+}
+
+/** Expense totals per category for one month, largest first. */
+export function categoryBreakdown(month: string): BreakdownRow[] {
+  const total = sql<number>`coalesce(sum(${transactions.amountCents}), 0)`;
+  return db
+    .select({ id: categories.id, name: categories.name, totalCents: total })
+    .from(transactions)
+    .innerJoin(categories, eq(transactions.categoryId, categories.id))
+    .where(and(buildWhere({ month }), eq(categories.kind, "expense")))
+    .groupBy(categories.id, categories.name)
+    .orderBy(desc(total), categories.name)
+    .all();
+}
+
+export type MonthTotals = { month: string; expenseCents: number; incomeCents: number };
+
+/** Expense and income totals for each month in `months` (oldest first); empty months are zero. */
+export function monthlyTotals(months: string[]): MonthTotals[] {
+  const first = monthRange(months[0]).start;
+  const last = monthRange(months[months.length - 1]).end;
+  const monthExpr = sql<string>`substr(${transactions.date}, 1, 7)`;
+  const rows = db
+    .select({
+      month: monthExpr,
+      kind: categories.kind,
+      total: sql<number>`coalesce(sum(${transactions.amountCents}), 0)`,
+    })
+    .from(transactions)
+    .innerJoin(categories, eq(transactions.categoryId, categories.id))
+    .where(and(gte(transactions.date, first), lte(transactions.date, last)))
+    .groupBy(monthExpr, categories.kind)
+    .all();
+  return months.map((month) => ({
+    month,
+    expenseCents: rows.find((r) => r.month === month && r.kind === "expense")?.total ?? 0,
+    incomeCents: rows.find((r) => r.month === month && r.kind === "income")?.total ?? 0,
+  }));
 }
 
 /** Income and expense totals (in cents) for the same filters as the list. */
