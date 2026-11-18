@@ -32,9 +32,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/transactions" className="hover:underline">Transactions</Link>
             <Link href="/budgets" className="hover:underline">Budgets</Link>
             <Link href="/recurring" className="hover:underline">Recurring</Link>
+            <Link href="/import" className="hover:underline">Import</Link>
           </nav>
         </header>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+        <footer className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-6 gap-y-1 px-4 pb-6 text-xs text-muted">
+          <form method="post" action="/api/backup">
+            <button type="submit" className="underline">Download backup</button>
+          </form>
+          <span>Your data stays in a local file on this computer.</span>
+        </footer>
       </body>
     </html>
   );
