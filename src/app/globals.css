@@ -74,3 +74,52 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Dropdown options: black on white, inverted on hover/selection. */
+option,
+optgroup {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+option:hover,
+option:focus,
+option:checked {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+option:disabled {
+  color: #898781;
+}
+
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  ::picker(select) {
+    background-color: #000000;
+    border: 1px solid #383835;
+    border-radius: 0.375rem;
+    padding: 0.25rem;
+  }
+
+  select option {
+    padding: 0.25rem 0.5rem;
+    background-color: #000000;
+    color: #ffffff;
+  }
+
+  select option:hover,
+  select option:focus,
+  select option:checked {
+    background-color: #ffffff;
+    color: #000000;
+  }
+
+  select option::checkmark {
+    display: none;
+  }
+}

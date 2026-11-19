@@ -64,7 +64,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           Search
           <input type="search" name="q" defaultValue={q ?? ""} placeholder="Description" className={input} />
         </label>
-        <button type="submit" className={`${input} font-medium`}>Apply</button>
+        <button type="submit" className={`${input} cursor-pointer font-medium transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800`}>Apply</button>
         <Link href="/transactions" className="py-1.5 text-sm underline">Reset</Link>
       </form>
 
