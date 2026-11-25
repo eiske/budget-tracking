@@ -93,6 +93,16 @@ option:disabled {
   color: #898781;
 }
 
+/* Group labels (Expenses / Income) stand out from the options under them. */
+optgroup {
+  color: #898781;
+  font-weight: 700;
+}
+
+optgroup option {
+  font-weight: 400;
+}
+
 @supports (appearance: base-select) {
   select,
   ::picker(select) {
@@ -117,6 +127,11 @@ option:disabled {
   select option:checked {
     background-color: #ffffff;
     color: #000000;
+  }
+
+  /* Indent categories under their group label (Expenses / Income). */
+  select optgroup option {
+    padding-inline-start: 1.5rem;
   }
 
   select option::checkmark {

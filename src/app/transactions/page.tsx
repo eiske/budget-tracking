@@ -55,9 +55,16 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           Category
           <select name="category" defaultValue={categoryId ?? ""} className={input}>
             <option value="">All</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
+            <optgroup label="Expenses">
+              {categories.filter((c) => c.kind === "expense").map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Income">
+              {categories.filter((c) => c.kind === "income").map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </optgroup>
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs">
