@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   experimental: {
     // Importing re-sends the statement text with the form, so allow more than the 1MB default.
-    // Must stay above MAX_FILE_BYTES (1.5MB) plus form overhead.
+    // Must stay above MAX_TOTAL_BYTES (3MB, all selected files together) plus form overhead.
     serverActions: { bodySizeLimit: "4mb" },
   },
   turbopack: {

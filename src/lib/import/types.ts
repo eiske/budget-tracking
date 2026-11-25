@@ -25,8 +25,11 @@ export type Candidate = {
   description: string; // shortened, what gets stored
   rawDescription: string; // full text, used only for keyword rules
   hash: string; // dedupe key stored in transactions.import_hash
-  duplicateInFile: boolean; // same hash seen earlier in this file
+  duplicateInFile: boolean; // same hash seen earlier in this file (or in an earlier file of the same import)
 };
 
 export const MAX_FILE_BYTES = 1.5 * 1024 * 1024;
-export const MAX_ROWS = 5000;
+export const MAX_ROWS = 5000; // per import, across all files
+export const MAX_FILES = 10;
+/** All files together. The import form re-sends every text, so this must stay under the server action body limit (next.config). */
+export const MAX_TOTAL_BYTES = 3 * 1024 * 1024;

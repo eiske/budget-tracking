@@ -7,6 +7,7 @@ import {
   commitImport,
   type AnalyzeState,
   type CommitState,
+  type FilePreview,
   type ImportPreview,
 } from "@/app/import/actions";
 import { CURRENCY, LOCALE } from "@/lib/config";
@@ -27,9 +28,12 @@ export function ImportWizard({ categories }: { categories: Category[] }) {
     <div className="flex flex-col gap-6">
       <form action={analyze} className={card}>
         <label className="flex flex-col gap-2 text-sm">
-          <span className="font-semibold">1. Choose a statement file</span>
-          <input type="file" name="file" accept=".csv,.ofx,.qfx,.txt,text/csv" required className="text-sm" />
-          <span className="text-xs text-muted">CSV or OFX, up to 1.5 MB. The file is read by this app only; nothing is uploaded elsewhere.</span>
+          <span className="font-semibold">1. Choose statement files</span>
+          <input type="file" name="file" accept=".csv,.ofx,.qfx,.txt,text/csv" multiple required className="text-sm" />
+          <span className="text-xs text-muted">
+            CSV or OFX, one or more at a time (up to 10 files, 1.5 MB each). Files are read by this app only; nothing
+            is uploaded elsewhere.
+          </span>
         </label>
         <div className="flex items-center gap-3">
           <button
@@ -37,7 +41,7 @@ export function ImportWizard({ categories }: { categories: Category[] }) {
             disabled={analyzing}
             className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
           >
-            {analyzing ? "Reading…" : "Read file"}
+            {analyzing ? "Reading…" : "Read files"}
           </button>
           {analysis?.error && <p role="alert" className="text-sm text-red-600">{analysis.error}</p>}
         </div>
@@ -74,85 +78,65 @@ function PreviewForm({
   commitError?: string;
 }) {
   const fmt = (c: number) => formatCents(Math.abs(c), CURRENCY, LOCALE);
+  const multi = preview.files.length > 1;
   const fresh = preview.rows.filter((r) => r.status === "new").length;
   const existing = preview.rows.filter((r) => r.status === "exists").length;
   const repeated = preview.rows.filter((r) => r.status === "duplicate").length;
+  const errorCount = preview.files.reduce((n, f) => n + f.errors.length, 0);
+  const needsMapping = preview.files.some((f) => f.needsMapping);
   const expenseCats = categories.filter((c) => c.kind === "expense");
   const incomeCats = categories.filter((c) => c.kind === "income");
-
-  const columnSelect = (name: string, value: number | null, allowNone: boolean, label: string) => (
-    <label className="flex flex-col gap-1 text-xs">
-      {label}
-      <select name={name} defaultValue={value === null ? (allowNone ? "none" : "") : String(value)} className={field}>
-        {allowNone ? <option value="none">None</option> : <option value="" disabled>Choose…</option>}
-        {preview.headers.map((h, i) => (
-          <option key={i} value={i}>{h || `Column ${i + 1}`}</option>
-        ))}
-      </select>
-    </label>
-  );
+  const fileLabel = (i: number) => preview.files[i].fileName || `File ${i + 1}`;
 
   return (
     <form action={commit} className={card}>
-      <input type="hidden" name="text" value={preview.text} />
-      <input type="hidden" name="fileName" value={preview.fileName} />
+      <input type="hidden" name="fileCount" value={preview.files.length} />
+      {preview.files.map((f, i) => (
+        <span key={i} hidden>
+          <input type="hidden" name={`f${i}_text`} value={f.text} />
+          <input type="hidden" name={`f${i}_fileName`} value={f.fileName} />
+        </span>
+      ))}
 
       <div>
-        <h2 className="font-semibold">2. Review {preview.fileName && <span className="font-normal text-muted">· {preview.fileName}</span>}</h2>
+        <h2 className="font-semibold">
+          2. Review{" "}
+          {multi ? (
+            <span className="font-normal text-muted">· {preview.files.length} files</span>
+          ) : (
+            preview.files[0].fileName && <span className="font-normal text-muted">· {preview.files[0].fileName}</span>
+          )}
+        </h2>
         <p className="mt-1 text-sm text-ink-2">
           {preview.rows.length} rows read: {fresh} new
           {existing > 0 && `, ${existing} already imported`}
-          {repeated > 0 && `, ${repeated} repeated in the file`}
-          {preview.errors.length > 0 && `, ${preview.errors.length} with problems`}.
+          {repeated > 0 && `, ${repeated} repeated ${multi ? "across the files" : "in the file"}`}
+          {errorCount > 0 && `, ${errorCount} with problems`}.
         </p>
       </div>
 
-      {preview.fileKind === "csv" && (
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-2 text-sm font-medium">Columns and formats</legend>
-          <div className="flex flex-wrap items-end gap-3">
-            {columnSelect("map_date", preview.mapping.date, false, "Date")}
-            {columnSelect("map_amount", preview.mapping.amount, false, "Amount")}
-            {columnSelect("map_description", preview.mapping.description, false, "Description")}
-            {columnSelect("map_id", preview.mapping.id, true, "Unique id (optional)")}
-            <label className="flex flex-col gap-1 text-xs">
-              Date format
-              <select name="dateFormat" defaultValue={preview.needsMapping ? "" : preview.formats.dateFormat} className={field}>
-                {/* Before the columns are known nothing could be detected: let the next read detect it. */}
-                {preview.needsMapping && <option value="">Auto-detect</option>}
-                <option value="DMY">DD/MM/YYYY</option>
-                <option value="MDY">MM/DD/YYYY</option>
-                <option value="YMD">YYYY-MM-DD</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-xs">
-              Decimal separator
-              <select name="decimal" defaultValue={preview.needsMapping ? "" : preview.formats.decimal} className={field}>
-                {preview.needsMapping && <option value="">Auto-detect</option>}
-                <option value=".">Dot (1234.56)</option>
-                <option value=",">Comma (1234,56)</option>
-              </select>
-            </label>
-            {/* First submit button in the form, so pressing Enter re-reads instead of importing. */}
-            <button type="submit" formAction={analyze} className={`${field} font-medium`}>Update preview</button>
-          </div>
-          {preview.needsMapping && (
-            <p role="alert" className="text-sm text-red-600">
-              Could not tell which columns hold the date, amount and description. Choose them, then update the preview.
-            </p>
-          )}
-        </fieldset>
+      {preview.files.map((f, i) =>
+        f.fileKind === "csv" ? (
+          <ColumnSettings key={i} file={f} p={`f${i}_`} title={multi ? fileLabel(i) : undefined} analyze={analyze} />
+        ) : null,
       )}
 
-      {preview.errors.length > 0 && (
+      {errorCount > 0 && (
         <details className="text-sm">
           <summary className="cursor-pointer text-red-600">
-            {preview.errors.length} {preview.errors.length === 1 ? "row" : "rows"} could not be read and will be left out
+            {errorCount} {errorCount === 1 ? "row" : "rows"} could not be read and will be left out
           </summary>
           <ul className="mt-2 list-disc pl-5 text-ink-2">
-            {preview.errors.slice(0, 10).map((e, i) => (
-              <li key={i}>{e.line > 0 ? `Line ${e.line}: ` : ""}{e.message}</li>
-            ))}
+            {preview.files
+              .flatMap((f, i) => f.errors.map((e) => ({ ...e, file: i })))
+              .slice(0, 10)
+              .map((e, i) => (
+                <li key={i}>
+                  {multi && `${fileLabel(e.file)}${e.line > 0 ? ", " : ": "}`}
+                  {e.line > 0 ? `${multi ? "line" : "Line"} ${e.line}: ` : ""}
+                  {e.message}
+                </li>
+              ))}
           </ul>
         </details>
       )}
@@ -169,6 +153,7 @@ function PreviewForm({
               <thead>
                 <tr className="border-b border-hairline text-left text-muted">
                   <th className="py-2 font-medium">Date</th>
+                  {multi && <th className="font-medium">File</th>}
                   <th className="font-medium">Description</th>
                   <th className="pr-3 text-right font-medium">Amount</th>
                   <th className="font-medium">Category</th>
@@ -176,8 +161,9 @@ function PreviewForm({
               </thead>
               <tbody>
                 {preview.rows.map((r) => (
-                  <tr key={r.index} className="border-b border-hairline align-top">
+                  <tr key={`${r.file}-${r.index}`} className="border-b border-hairline align-top">
                     <td className="whitespace-nowrap py-2 pr-3">{r.date}</td>
+                    {multi && <td className="max-w-40 truncate pr-3 text-muted" title={fileLabel(r.file)}>{fileLabel(r.file)}</td>}
                     <td className="pr-3">{r.description}</td>
                     <td className={`whitespace-nowrap pr-3 text-right tabular-nums ${r.kind === "income" ? "text-green-600" : ""}`}>
                       {r.kind === "income" ? "+" : "−"}{fmt(r.amountCents)}
@@ -185,7 +171,7 @@ function PreviewForm({
                     <td className="py-1.5">
                       {r.status === "new" ? (
                         <select
-                          name={`row_${r.index}`}
+                          name={`row_${r.file}_${r.index}`}
                           defaultValue={r.suggestedCategoryId === null ? "skip" : String(r.suggestedCategoryId)}
                           className={`${field} w-48`}
                           aria-label={`Category for ${r.description}`}
@@ -197,7 +183,7 @@ function PreviewForm({
                         </select>
                       ) : (
                         <span className="text-muted">
-                          {r.status === "exists" ? "Already imported" : "Repeated in this file"}
+                          {r.status === "exists" ? "Already imported" : multi ? "Repeated in the files" : "Repeated in this file"}
                         </span>
                       )}
                     </td>
@@ -212,16 +198,81 @@ function PreviewForm({
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          disabled={committing || fresh === 0 || preview.needsMapping}
+          disabled={committing || fresh === 0 || needsMapping}
           className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
         >
           {committing ? "Importing…" : "Import selected rows"}
         </button>
-        {fresh === 0 && !preview.needsMapping && preview.rows.length > 0 && (
+        {fresh === 0 && !needsMapping && preview.rows.length > 0 && (
           <span className="text-sm text-muted">Every row is already in the app.</span>
         )}
         {commitError && <p role="alert" className="text-sm text-red-600">{commitError}</p>}
       </div>
     </form>
+  );
+}
+
+/** Column mapping and formats for one CSV. Field names carry the file's prefix (f0_, f1_, …). */
+function ColumnSettings({
+  file,
+  p,
+  title,
+  analyze,
+}: {
+  file: FilePreview;
+  p: string;
+  title?: string;
+  analyze: (formData: FormData) => void;
+}) {
+  const columnSelect = (name: string, value: number | null, allowNone: boolean, label: string) => (
+    <label className="flex flex-col gap-1 text-xs">
+      {label}
+      <select name={p + name} defaultValue={value === null ? (allowNone ? "none" : "") : String(value)} className={field}>
+        {allowNone ? <option value="none">None</option> : <option value="" disabled>Choose…</option>}
+        {file.headers.map((h, i) => (
+          <option key={i} value={i}>{h || `Column ${i + 1}`}</option>
+        ))}
+      </select>
+    </label>
+  );
+
+  return (
+    <fieldset className="flex flex-col gap-3">
+      <legend className="mb-2 text-sm font-medium">
+        Columns and formats{title && <span className="font-normal text-muted"> · {title}</span>}
+      </legend>
+      <div className="flex flex-wrap items-end gap-3">
+        {columnSelect("map_date", file.mapping.date, false, "Date")}
+        {columnSelect("map_amount", file.mapping.amount, false, "Amount")}
+        {columnSelect("map_description", file.mapping.description, false, "Description")}
+        {columnSelect("map_id", file.mapping.id, true, "Unique id (optional)")}
+        <label className="flex flex-col gap-1 text-xs">
+          Date format
+          <select name={p + "dateFormat"} defaultValue={file.needsMapping ? "" : file.formats.dateFormat} className={field}>
+            {/* Before the columns are known nothing could be detected: let the next read detect it. */}
+            {file.needsMapping && <option value="">Auto-detect</option>}
+            <option value="DMY">DD/MM/YYYY</option>
+            <option value="MDY">MM/DD/YYYY</option>
+            <option value="YMD">YYYY-MM-DD</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs">
+          Decimal separator
+          <select name={p + "decimal"} defaultValue={file.needsMapping ? "" : file.formats.decimal} className={field}>
+            {file.needsMapping && <option value="">Auto-detect</option>}
+            <option value=".">Dot (1234.56)</option>
+            <option value=",">Comma (1234,56)</option>
+          </select>
+        </label>
+        {/* Submit buttons ahead of "Import", so pressing Enter re-reads instead of importing. */}
+        <button type="submit" formAction={analyze} className={`${field} font-medium`}>Update preview</button>
+      </div>
+      {file.needsMapping && (
+        <p role="alert" className="text-sm text-red-600">
+          Could not tell which columns hold the date, amount and description{title ? ` in ${title}` : ""}. Choose
+          them, then update the preview.
+        </p>
+      )}
+    </fieldset>
   );
 }
