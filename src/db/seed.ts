@@ -11,6 +11,8 @@ const defaults = [
   { name: "Entertainment", color: "#db2777", kind: "expense" },
   { name: "Subscriptions", color: "#4f46e5", kind: "expense" },
   { name: "Shopping", color: "#ca8a04", kind: "expense" },
+  { name: "Taxes", color: "#b45309", kind: "expense" },
+  { name: "Investments", color: "#0369a1", kind: "expense" },
   { name: "Other", color: "#64748b", kind: "expense" },
   { name: "Salary", color: "#15803d", kind: "income" },
   { name: "Other income", color: "#0d9488", kind: "income" },
