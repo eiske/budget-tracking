@@ -105,6 +105,7 @@ Set these in `.env.local` (see `.env.example`) or the environment. Restart the s
 | `npm run db:migrate` | Apply pending migrations. **Run it after pulling a change that adds one.** |
 | `npm run db:seed` | Add the default categories if missing. |
 | `npm run db:backup` | Write a timestamped backup of the database. |
+| `npm run db:reset` | **Deletes all data**, then migrates and seeds again. Asks for confirmation and backs up first (`-- --yes` skips the prompt, `-- --no-backup` skips the backup). |
 | `npm test` | Unit tests (Vitest). |
 | `npm run test:e2e` | End-to-end tests (Playwright). |
 | `npm run lint` | ESLint. |
